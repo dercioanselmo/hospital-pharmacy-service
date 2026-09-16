@@ -71,4 +71,3 @@ mvn test
 ```
 
 `ClinicalOrderClient` is mocked in integration tests (`@MockBean`) — this service's own test suite never makes a real network call to Clinical.
-# hospital-pharmacy-service
