@@ -6,6 +6,8 @@ import java.util.UUID;
 import mz.mva.pharmacy.domain.DispensingRecord;
 import mz.mva.pharmacy.domain.PrescriptionOrder;
 import mz.mva.pharmacy.dto.DispensingRecordDto;
+import mz.mva.pharmacy.messaging.EventPublisher;
+import mz.mva.pharmacy.messaging.PrescriptionDispensedPayload;
 import mz.mva.pharmacy.repository.DispensingRecordRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,14 +20,17 @@ public class DispensingRecordService {
     private final DispensingRecordRepository dispensingRecordRepository;
     private final PrescriptionOrderService prescriptionOrderService;
     private final MedicationService medicationService;
+    private final EventPublisher eventPublisher;
 
     public DispensingRecordService(
             DispensingRecordRepository dispensingRecordRepository,
             PrescriptionOrderService prescriptionOrderService,
-            MedicationService medicationService) {
+            MedicationService medicationService,
+            EventPublisher eventPublisher) {
         this.dispensingRecordRepository = dispensingRecordRepository;
         this.prescriptionOrderService = prescriptionOrderService;
         this.medicationService = medicationService;
+        this.eventPublisher = eventPublisher;
     }
 
     public List<DispensingRecordDto> findByPrescriptionOrder(UUID prescriptionOrderId) {
@@ -46,6 +51,11 @@ public class DispensingRecordService {
         DispensingRecord record = new DispensingRecord(UUID.randomUUID(), order, quantityDispensed, staffId);
         DispensingRecord saved = dispensingRecordRepository.save(record);
         prescriptionOrderService.markDispensed(prescriptionOrderId);
+        eventPublisher.publish(
+                "PrescriptionDispensed",
+                new PrescriptionDispensedPayload(
+                        saved.getId(), order.getId(), order.getEncounterId(), order.getPatientId(),
+                        quantityDispensed));
         return DispensingRecordDto.from(saved);
     }
 
