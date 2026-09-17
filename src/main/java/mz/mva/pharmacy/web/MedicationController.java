@@ -2,11 +2,15 @@ package mz.mva.pharmacy.web;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
+import mz.mva.pharmacy.dto.CreatePriceVersionRequest;
 import mz.mva.pharmacy.dto.MedicationDto;
+import mz.mva.pharmacy.dto.PriceVersionDto;
 import mz.mva.pharmacy.service.MedicationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,5 +38,18 @@ public class MedicationController {
     @PreAuthorize("hasAuthority('PHARMACY_MEDICATION_MANAGE')")
     public MedicationDto create(@Valid @RequestBody MedicationDto dto) {
         return medicationService.create(dto);
+    }
+
+    @GetMapping("/{id}/price-versions")
+    @PreAuthorize("hasAuthority('PHARMACY_ORDER_VIEW')")
+    public List<PriceVersionDto> findPriceVersions(@PathVariable UUID id) {
+        return medicationService.findPriceVersions(id);
+    }
+
+    @PostMapping("/{id}/price-versions")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('PHARMACY_MEDICATION_MANAGE')")
+    public PriceVersionDto addPriceVersion(@PathVariable UUID id, @Valid @RequestBody CreatePriceVersionRequest request) {
+        return medicationService.addPriceVersion(id, request);
     }
 }

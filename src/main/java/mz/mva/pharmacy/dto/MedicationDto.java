@@ -3,6 +3,7 @@ package mz.mva.pharmacy.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
+import java.math.BigDecimal;
 import java.util.UUID;
 import mz.mva.pharmacy.domain.Medication;
 import mz.mva.pharmacy.domain.MedicationForm;
@@ -14,9 +15,14 @@ public record MedicationDto(
         @NotNull MedicationForm form,
         @NotBlank String strength,
         @PositiveOrZero int onHandQuantity,
-        boolean active) {
+        boolean active,
+        BigDecimal currentPrice) {
 
     public static MedicationDto from(Medication medication) {
+        return from(medication, null);
+    }
+
+    public static MedicationDto from(Medication medication, BigDecimal currentPrice) {
         return new MedicationDto(
                 medication.getId(),
                 medication.getCode(),
@@ -24,6 +30,7 @@ public record MedicationDto(
                 medication.getForm(),
                 medication.getStrength(),
                 medication.getOnHandQuantity(),
-                medication.isActive());
+                medication.isActive(),
+                currentPrice);
     }
 }
