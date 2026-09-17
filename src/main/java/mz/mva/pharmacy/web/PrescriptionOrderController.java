@@ -7,9 +7,12 @@ import mz.mva.pharmacy.domain.PrescriptionOrderStatus;
 import mz.mva.pharmacy.dto.PrescriptionOrderDto;
 import mz.mva.pharmacy.dto.ReceiveOrderRequest;
 import mz.mva.pharmacy.dto.VerifyOrderRequest;
+import mz.mva.pharmacy.service.PatientOwnershipGuard;
 import mz.mva.pharmacy.service.PrescriptionOrderService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,9 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class PrescriptionOrderController {
 
     private final PrescriptionOrderService prescriptionOrderService;
+    private final PatientOwnershipGuard patientOwnershipGuard;
 
-    public PrescriptionOrderController(PrescriptionOrderService prescriptionOrderService) {
+    public PrescriptionOrderController(
+            PrescriptionOrderService prescriptionOrderService, PatientOwnershipGuard patientOwnershipGuard) {
         this.prescriptionOrderService = prescriptionOrderService;
+        this.patientOwnershipGuard = patientOwnershipGuard;
     }
 
     @GetMapping
@@ -38,7 +44,10 @@ public class PrescriptionOrderController {
 
     @GetMapping("/patient/{patientId}")
     @PreAuthorize("hasAuthority('PHARMACY_ORDER_VIEW')")
-    public List<PrescriptionOrderDto> findByPatient(@PathVariable UUID patientId) {
+    public List<PrescriptionOrderDto> findByPatient(
+            @PathVariable UUID patientId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            Authentication authentication) {
+        patientOwnershipGuard.enforce(authorization, UUID.fromString(authentication.getName()), patientId);
         return prescriptionOrderService.findByPatient(patientId);
     }
 
