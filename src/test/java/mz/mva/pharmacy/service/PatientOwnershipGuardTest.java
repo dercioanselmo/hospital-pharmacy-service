@@ -22,7 +22,7 @@ class PatientOwnershipGuardTest {
         UUID patientId = UUID.randomUUID();
         when(client.findOwnPatientId("Bearer t", userId)).thenReturn(Optional.of(patientId));
 
-        assertThatCode(() -> guard.enforce("Bearer t", userId, patientId)).doesNotThrowAnyException();
+        assertThatCode(() -> guard.enforce("Bearer t", userId.toString(), patientId)).doesNotThrowAnyException();
     }
 
     @Test
@@ -30,8 +30,14 @@ class PatientOwnershipGuardTest {
         UUID userId = UUID.randomUUID();
         when(client.findOwnPatientId("Bearer t", userId)).thenReturn(Optional.of(UUID.randomUUID()));
 
-        assertThatThrownBy(() -> guard.enforce("Bearer t", userId, UUID.randomUUID()))
+        assertThatThrownBy(() -> guard.enforce("Bearer t", userId.toString(), UUID.randomUUID()))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void aNonUuidSubjectFromASelfSignedInternalServiceTokenIsUnaffected() {
+        assertThatCode(() -> guard.enforce("Bearer t", "notification-service-internal", UUID.randomUUID()))
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -39,6 +45,6 @@ class PatientOwnershipGuardTest {
         UUID userId = UUID.randomUUID();
         when(client.findOwnPatientId("Bearer t", userId)).thenReturn(Optional.empty());
 
-        assertThatCode(() -> guard.enforce("Bearer t", userId, UUID.randomUUID())).doesNotThrowAnyException();
+        assertThatCode(() -> guard.enforce("Bearer t", userId.toString(), UUID.randomUUID())).doesNotThrowAnyException();
     }
 }

@@ -47,7 +47,7 @@ public class PrescriptionOrderController {
     public List<PrescriptionOrderDto> findByPatient(
             @PathVariable UUID patientId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
             Authentication authentication) {
-        patientOwnershipGuard.enforce(authorization, UUID.fromString(authentication.getName()), patientId);
+        patientOwnershipGuard.enforce(authorization, authentication.getName(), patientId);
         return prescriptionOrderService.findByPatient(patientId);
     }
 
