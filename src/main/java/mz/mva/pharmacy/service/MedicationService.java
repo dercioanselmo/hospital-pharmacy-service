@@ -46,8 +46,9 @@ public class MedicationService {
 
     public PriceVersionDto addPriceVersion(UUID medicationId, CreatePriceVersionRequest request) {
         Medication medication = getOrThrow(medicationId);
+        String priceListCode = request.resolvedPriceListCode();
         List<MedicationPriceVersion> versions =
-                priceVersionRepository.findByMedicationIdOrderByEffectiveFromDesc(medicationId);
+                priceVersionRepository.findByMedicationIdAndPriceListCodeOrderByEffectiveFromDesc(medicationId, priceListCode);
         MedicationPriceVersion latest = versions.isEmpty() ? null : versions.get(0);
         if (latest != null && !request.effectiveFrom().isAfter(latest.getEffectiveFrom())) {
             throw new InvalidStateTransitionException(
@@ -57,13 +58,19 @@ public class MedicationService {
             latest.setEffectiveTo(request.effectiveFrom());
             priceVersionRepository.save(latest);
         }
-        MedicationPriceVersion created =
-                new MedicationPriceVersion(UUID.randomUUID(), medication, request.price(), request.effectiveFrom());
+        MedicationPriceVersion created = new MedicationPriceVersion(
+                UUID.randomUUID(), medication, request.price(), request.effectiveFrom(), priceListCode);
         return PriceVersionDto.from(priceVersionRepository.save(created));
     }
 
     BigDecimal resolveCurrentPrice(UUID medicationId, LocalDate asOf) {
-        return priceVersionRepository.findByMedicationIdOrderByEffectiveFromDesc(medicationId).stream()
+        return resolveCurrentPrice(medicationId, asOf, "STANDARD");
+    }
+
+    BigDecimal resolveCurrentPrice(UUID medicationId, LocalDate asOf, String priceListCode) {
+        return priceVersionRepository
+                .findByMedicationIdAndPriceListCodeOrderByEffectiveFromDesc(medicationId, priceListCode)
+                .stream()
                 .filter(v -> !v.getEffectiveFrom().isAfter(asOf) && (v.getEffectiveTo() == null || v.getEffectiveTo().isAfter(asOf)))
                 .map(MedicationPriceVersion::getPrice)
                 .findFirst()

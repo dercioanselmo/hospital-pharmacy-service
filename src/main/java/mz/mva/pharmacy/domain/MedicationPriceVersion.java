@@ -37,17 +37,21 @@ public class MedicationPriceVersion {
     @Column(name = "effective_to")
     private LocalDate effectiveTo;
 
+    @Column(name = "price_list_code", nullable = false)
+    private String priceListCode = "STANDARD";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     protected MedicationPriceVersion() {
     }
 
-    public MedicationPriceVersion(UUID id, Medication medication, BigDecimal price, LocalDate effectiveFrom) {
+    public MedicationPriceVersion(UUID id, Medication medication, BigDecimal price, LocalDate effectiveFrom, String priceListCode) {
         this.id = id;
         this.medication = medication;
         this.price = price;
         this.effectiveFrom = effectiveFrom;
+        this.priceListCode = priceListCode;
     }
 
     @PrePersist
@@ -77,6 +81,10 @@ public class MedicationPriceVersion {
 
     public void setEffectiveTo(LocalDate effectiveTo) {
         this.effectiveTo = effectiveTo;
+    }
+
+    public String getPriceListCode() {
+        return priceListCode;
     }
 
     public Instant getCreatedAt() {

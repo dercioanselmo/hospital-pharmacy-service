@@ -29,7 +29,8 @@ class MedicationServiceTest {
     @Test
     void resolveCurrentPriceReturnsNullWhenNoVersionsConfigured() {
         UUID id = UUID.randomUUID();
-        when(priceVersionRepository.findByMedicationIdOrderByEffectiveFromDesc(id)).thenReturn(List.of());
+        when(priceVersionRepository.findByMedicationIdAndPriceListCodeOrderByEffectiveFromDesc(id, "STANDARD"))
+                .thenReturn(List.of());
 
         assertThat(medicationService.resolveCurrentPrice(id, LocalDate.now())).isNull();
     }
@@ -38,21 +39,22 @@ class MedicationServiceTest {
     void addPriceVersionClosesThePreviousOpenVersionAndRejectsBackdating() {
         UUID id = UUID.randomUUID();
         Medication medication = new Medication(id, "PARA-500", "Paracetamol", MedicationForm.TABLET, "500mg", 100);
-        MedicationPriceVersion existingOpen =
-                new MedicationPriceVersion(UUID.randomUUID(), medication, BigDecimal.valueOf(5), LocalDate.of(2026, 1, 1));
+        MedicationPriceVersion existingOpen = new MedicationPriceVersion(
+                UUID.randomUUID(), medication, BigDecimal.valueOf(5), LocalDate.of(2026, 1, 1), "STANDARD");
         when(medicationRepository.findById(id)).thenReturn(Optional.of(medication));
-        when(priceVersionRepository.findByMedicationIdOrderByEffectiveFromDesc(id)).thenReturn(List.of(existingOpen));
+        when(priceVersionRepository.findByMedicationIdAndPriceListCodeOrderByEffectiveFromDesc(id, "STANDARD"))
+                .thenReturn(List.of(existingOpen));
         when(priceVersionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         PriceVersionDto created = medicationService.addPriceVersion(
-                id, new CreatePriceVersionRequest(BigDecimal.valueOf(6), LocalDate.of(2026, 6, 1)));
+                id, new CreatePriceVersionRequest(BigDecimal.valueOf(6), LocalDate.of(2026, 6, 1), null));
 
         assertThat(existingOpen.getEffectiveTo()).isEqualTo(LocalDate.of(2026, 6, 1));
         assertThat(created.price()).isEqualByComparingTo(BigDecimal.valueOf(6));
         assertThat(created.effectiveTo()).isNull();
 
         assertThatThrownBy(() -> medicationService.addPriceVersion(
-                        id, new CreatePriceVersionRequest(BigDecimal.valueOf(4), LocalDate.of(2025, 1, 1))))
+                        id, new CreatePriceVersionRequest(BigDecimal.valueOf(4), LocalDate.of(2025, 1, 1), null)))
                 .isInstanceOf(InvalidStateTransitionException.class);
     }
 }

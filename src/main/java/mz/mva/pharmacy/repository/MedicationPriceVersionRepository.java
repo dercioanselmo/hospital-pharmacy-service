@@ -8,4 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface MedicationPriceVersionRepository extends JpaRepository<MedicationPriceVersion, UUID> {
 
     List<MedicationPriceVersion> findByMedicationIdOrderByEffectiveFromDesc(UUID medicationId);
+
+    List<MedicationPriceVersion> findByMedicationIdAndPriceListCodeOrderByEffectiveFromDesc(
+            UUID medicationId, String priceListCode);
 }

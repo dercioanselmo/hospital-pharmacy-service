@@ -1,9 +1,11 @@
 package mz.mva.pharmacy.service;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import mz.mva.pharmacy.domain.DispensingRecord;
+import mz.mva.pharmacy.domain.Medication;
 import mz.mva.pharmacy.domain.PrescriptionOrder;
 import mz.mva.pharmacy.dto.DispensingRecordDto;
 import mz.mva.pharmacy.messaging.EventPublisher;
@@ -47,15 +49,22 @@ public class DispensingRecordService {
      */
     public DispensingRecordDto create(UUID prescriptionOrderId, int quantityDispensed, UUID staffId) {
         PrescriptionOrder order = prescriptionOrderService.getOrThrow(prescriptionOrderId);
-        medicationService.decrementStock(order.getMedication().getId(), quantityDispensed);
+        Medication medication = order.getMedication();
+        medicationService.decrementStock(medication.getId(), quantityDispensed);
         DispensingRecord record = new DispensingRecord(UUID.randomUUID(), order, quantityDispensed, staffId);
         DispensingRecord saved = dispensingRecordRepository.save(record);
         prescriptionOrderService.markDispensed(prescriptionOrderId);
         eventPublisher.publish(
                 "PrescriptionDispensed",
                 new PrescriptionDispensedPayload(
-                        saved.getId(), order.getId(), order.getEncounterId(), order.getPatientId(),
-                        quantityDispensed));
+                        saved.getId(),
+                        order.getId(),
+                        order.getEncounterId(),
+                        order.getPatientId(),
+                        quantityDispensed,
+                        medication.getCode(),
+                        medication.getName(),
+                        medicationService.resolveCurrentPrice(medication.getId(), LocalDate.now())));
         return DispensingRecordDto.from(saved);
     }
 
