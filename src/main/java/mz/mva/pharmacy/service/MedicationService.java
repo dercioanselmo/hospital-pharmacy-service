@@ -98,4 +98,16 @@ public class MedicationService {
         medication.setOnHandQuantity(medication.getOnHandQuantity() - quantity);
         medicationRepository.save(medication);
     }
+
+    /**
+     * Keeps {@link Medication#getOnHandQuantity()}'s simple running total in sync with the
+     * Pharmacy Stocking Module's batch-level detail (Phase F) — every posted stocking document
+     * that adds stock to a batch also increments this aggregate, the same one {@link
+     * #decrementStock} already draws down on dispense.
+     */
+    void incrementStock(UUID medicationId, int quantity) {
+        Medication medication = getOrThrow(medicationId);
+        medication.setOnHandQuantity(medication.getOnHandQuantity() + quantity);
+        medicationRepository.save(medication);
+    }
 }
