@@ -53,8 +53,12 @@ public class PrescriptionOrderController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PHARMACY_ORDER_VIEW')")
-    public PrescriptionOrderDto findById(@PathVariable UUID id) {
-        return prescriptionOrderService.findById(id);
+    public PrescriptionOrderDto findById(
+            @PathVariable UUID id, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            Authentication authentication) {
+        PrescriptionOrderDto order = prescriptionOrderService.findById(id);
+        patientOwnershipGuard.enforce(authorization, authentication.getName(), order.patientId());
+        return order;
     }
 
     @PostMapping("/receive")
