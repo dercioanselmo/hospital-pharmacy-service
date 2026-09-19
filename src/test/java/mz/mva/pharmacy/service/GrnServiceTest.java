@@ -1,11 +1,9 @@
 package mz.mva.pharmacy.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -18,12 +16,10 @@ import mz.mva.pharmacy.domain.DocumentStatus;
 import mz.mva.pharmacy.domain.GoodsReceivedNote;
 import mz.mva.pharmacy.domain.GrnLine;
 import mz.mva.pharmacy.domain.Medication;
-import mz.mva.pharmacy.domain.MedicationBatch;
 import mz.mva.pharmacy.domain.MedicationForm;
 import mz.mva.pharmacy.domain.PharmacyStore;
 import mz.mva.pharmacy.dto.CreateGrnRequest;
 import mz.mva.pharmacy.dto.GrnLineRequest;
-import mz.mva.pharmacy.dto.StaffActionRequest;
 import mz.mva.pharmacy.repository.GoodsReceivedNoteRepository;
 import mz.mva.pharmacy.repository.GrnLineRepository;
 import mz.mva.pharmacy.repository.MedicationBatchRepository;
@@ -120,14 +116,23 @@ class GrnServiceTest {
     }
 
     @Test
-    void postingACancelledGrnFails() {
+    void postingAppliesFreeQuantityOnTopOfPurchasedQuantity() {
         PharmacyStore store = store();
-        GoodsReceivedNote grn = new GoodsReceivedNote(UUID.randomUUID(), "GRN-2026-000004", store, "Farmatex", LocalDate.now(), UUID.randomUUID());
-        // Simulate a cancelled GRN by reflecting DocumentStatus directly isn't possible without a
-        // setter -- post() then treat differently isn't modeled, so this test documents intent via
-        // the DRAFT path already covered; CANCELLED transitions aren't wired to a public setter yet
-        // (no cancel endpoint in this pass) so this case is exercised at the DocumentStatus/service
-        // contract level only where reachable.
-        assertThat(grn.getStatus()).isEqualTo(DocumentStatus.DRAFT);
+        Medication medication = medication();
+        GoodsReceivedNote grn = new GoodsReceivedNote(UUID.randomUUID(), "GRN-2026-000005", store, "Farmatex", LocalDate.now(), UUID.randomUUID());
+        GrnLine line = new GrnLine(UUID.randomUUID(), grn, medication, "B-005", LocalDate.now().plusYears(1), 50, 5,
+                new BigDecimal("5.00"), new BigDecimal("8.00"));
+
+        when(grnRepository.findById(grn.getId())).thenReturn(Optional.of(grn));
+        when(lineRepository.findByGrnId(grn.getId())).thenReturn(List.of(line));
+        when(batchRepository.findByMedicationIdAndStoreIdAndBatchNumber(medication.getId(), store.getId(), "B-005"))
+                .thenReturn(Optional.empty());
+        when(batchRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(medicationRepository.findById(medication.getId())).thenReturn(Optional.of(medication));
+        when(grnRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        grnService.post(grn.getId(), UUID.randomUUID());
+
+        assertThat(medication.getOnHandQuantity()).isEqualTo(55);
     }
 }
